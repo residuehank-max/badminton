@@ -57,12 +57,13 @@ body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-si
 .field{display:flex;flex-direction:column;gap:4px;min-width:0}
 .field > label{font-family:var(--f-display);font-size:12px;font-weight:600;letter-spacing:.06em;
   text-transform:uppercase;color:var(--ink-2)}
-input[type=text],input[type=date],input[type=time],input[type=number]{
+input[type=text],input[type=date],input[type=time],input[type=number],select{
   font-family:var(--f-body);font-size:16px;color:var(--ink);background:var(--field);
   border:1px solid transparent;border-radius:10px;padding:9px 10px;width:100%;min-width:0;
   font-variant-numeric:tabular-nums;}
 input[type=number]{font-family:var(--f-display);font-weight:600;letter-spacing:.02em}
-input:focus-visible{outline:2px solid var(--court);outline-offset:1px;border-color:transparent}
+select{font-variant-numeric:tabular-nums}
+input:focus-visible,select:focus-visible{outline:2px solid var(--court);outline-offset:1px;border-color:transparent}
 input::placeholder{color:var(--ink-2);opacity:.7}
 
 /* chips */
@@ -86,7 +87,7 @@ input::placeholder{color:var(--ink-2);opacity:.7}
   padding:2px 4px;border-radius:6px}
 .pdel:hover{color:var(--cork)}
 .ptime{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.ptime input[type=time]{background:var(--panel);width:auto;flex:0 1 112px;padding:6px 8px;font-size:16px}
+.ptime select{background:var(--panel);width:auto;flex:0 1 110px;padding:6px 8px;font-size:16px}
 .pmin{font-family:var(--f-display);font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
 .add{display:flex;gap:8px}
 .add input{flex:1;min-width:0}
@@ -179,11 +180,11 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
     <div class="grid g2">
       <div class="field">
         <label for="start">開始</label>
-        <input type="time" id="start" step="1800">
+        <select id="start"></select>
       </div>
       <div class="field">
         <label for="end">結束</label>
-        <input type="time" id="end" step="1800">
+        <select id="end"></select>
       </div>
     </div>
 
@@ -362,6 +363,47 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
     return fromMin(Math.round(m / 30) * 30);
   }
 
+  /* every half hour of the day — for the session's own start and end */
+  function allHalfHours(){
+    var out = [];
+    for(var m = 0; m < 1440; m += 30) out.push(fromMin(m));
+    return out;
+  }
+
+  /* only the half hours inside this session — for each player's arrival and exit */
+  function sessionSlots(){
+    var win = sessionWindow();
+    if(!win || win.e - win.s < 30) return allHalfHours();
+    var out = [];
+    for(var m = win.s; m <= win.e; m += 30) out.push(fromMin(m));
+    return out;
+  }
+
+  /* fill a dropdown with times, keeping the current choice when it still fits */
+  function fillTimes(sel, list, want, preferLast){
+    var cur = want !== undefined && want !== null ? want : sel.value;
+    sel.innerHTML = "";
+    list.forEach(function(t){
+      var o = document.createElement("option");
+      o.value = t; o.textContent = t;
+      sel.appendChild(o);
+    });
+    var pick = cur;
+    if(list.indexOf(pick) < 0) pick = snap30(pick);
+    if(list.indexOf(pick) < 0) pick = preferLast ? list[list.length - 1] : list[0];
+    sel.value = pick;
+    return pick;
+  }
+
+  /* the session moved — rebuild everyone's arrival and exit choices */
+  function refreshPersonTimes(){
+    var list = sessionSlots();
+    people.forEach(function(p){
+      p.from = fillTimes(p.el.from, list, p.from, false);
+      p.to = fillTimes(p.el.to, list, p.to, true);
+    });
+  }
+
   /* session window, in minutes, end pushed past midnight if needed */
   function sessionWindow(){
     var s = toMin(el.start.value), e = toMin(el.end.value);
@@ -482,14 +524,17 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
     cFull.type = "button"; cFull.className = "chip"; cFull.textContent = "全場";
     var cCustom = document.createElement("button");
     cCustom.type = "button"; cCustom.className = "chip"; cCustom.textContent = "自訂";
-    var tFrom = document.createElement("input");
-    tFrom.type = "time"; tFrom.step = "1800"; tFrom.value = p.from; tFrom.id = "from-" + p.id;
+    var slots = sessionSlots();
+    var tFrom = document.createElement("select");
+    tFrom.id = "from-" + p.id;
     tFrom.setAttribute("aria-label", "進場時間");
     var dash = document.createElement("span");
     dash.className = "pmin"; dash.textContent = "–";
-    var tTo = document.createElement("input");
-    tTo.type = "time"; tTo.step = "1800"; tTo.value = p.to; tTo.id = "to-" + p.id;
+    var tTo = document.createElement("select");
+    tTo.id = "to-" + p.id;
     tTo.setAttribute("aria-label", "離場時間");
+    p.from = fillTimes(tFrom, slots, p.from, false);
+    p.to = fillTimes(tTo, slots, p.to, true);
     var mins = document.createElement("span");
     mins.className = "pmin";
     row2.appendChild(cFull); row2.appendChild(cCustom);
@@ -510,17 +555,13 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
     cFull.addEventListener("click", function(){ p.mode = "full"; syncMode(); recalc(); save(); });
     cCustom.addEventListener("click", function(){
       p.mode = "custom";
-      var win = sessionWindow();
-      if(win){ if(!p.from) p.from = fromMin(win.s); if(!p.to) p.to = fromMin(win.e); }
-      tFrom.value = p.from; tTo.value = p.to;
+      var list = sessionSlots();
+      p.from = fillTimes(tFrom, list, p.from, false);
+      p.to = fillTimes(tTo, list, p.to, true);
       syncMode(); recalc(); save();
     });
-    tFrom.addEventListener("change", function(){
-      tFrom.value = snap30(tFrom.value); p.from = tFrom.value; recalc(); save();
-    });
-    tTo.addEventListener("change", function(){
-      tTo.value = snap30(tTo.value); p.to = tTo.value; recalc(); save();
-    });
+    tFrom.addEventListener("change", function(){ p.from = tFrom.value; recalc(); save(); });
+    tTo.addEventListener("change", function(){ p.to = tTo.value; recalc(); save(); });
     del.addEventListener("click", function(){
       people = people.filter(function(x){ return x.id !== p.id; });
       box.remove(); recalc(); save();
@@ -814,8 +855,8 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
   function loadRecord(rec){
     el.date.value = rec.date || "";
     el.venue.value = rec.venue || "";
-    el.start.value = rec.start || "";
-    el.end.value = rec.end || "";
+    fillTimes(el.start, allHalfHours(), rec.start || "19:00", false);
+    fillTimes(el.end, allHalfHours(), rec.end || "22:00", false);
     el.feeTotal.value = rec.feeTotal || "";
     el.feeHour.value = rec.feeHour || "";
     el.courts.value = rec.courts || "1";
@@ -974,7 +1015,7 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
   });
 
   ["start","end"].forEach(function(k){
-    el[k].addEventListener("change", function(){ el[k].value = snap30(el[k].value); });
+    el[k].addEventListener("change", function(){ refreshPersonTimes(); });
   });
 
   ["date","venue","start","end","feeTotal","feeHour","courts","ball"].forEach(function(k){
@@ -1062,8 +1103,8 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
   function seedDemo(){
     el.date.value = today();
     el.venue.value = "大安運動中心";
-    el.start.value = "19:00";
-    el.end.value = "22:00";
+    fillTimes(el.start, allHalfHours(), "19:00", false);
+    fillTimes(el.end, allHalfHours(), "22:00", false);
     el.feeHour.value = "400";
     el.courts.value = "2";
     el.ball.value = "300";
@@ -1079,8 +1120,8 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
     state.isDemo = false;
     el.date.value = d.date || today();
     el.venue.value = d.venue || "";
-    el.start.value = d.start || "19:00";
-    el.end.value = d.end || "22:00";
+    fillTimes(el.start, allHalfHours(), d.start || "19:00", false);
+    fillTimes(el.end, allHalfHours(), d.end || "22:00", false);
     el.feeTotal.value = d.feeTotal || "";
     el.feeHour.value = d.feeHour || "";
     el.courts.value = d.courts || "1";
@@ -1099,6 +1140,9 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
     });
     setFeeMode(d.feeMode === "total" ? "total" : "hour");
   }
+
+  fillTimes(el.start, allHalfHours(), "19:00", false);
+  fillTimes(el.end, allHalfHours(), "22:00", false);
 
   var saved = load();
   if(saved && (saved.people || saved.venue)){
