@@ -1,0 +1,1125 @@
+<title>羽球分帳</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: single phone-width column; three stacked cards divided by court-line hairlines. */
+:root{
+  --ground:#F1F4F1; --panel:#FFFFFF; --field:#ECF1EE;
+  --ink:#13201B; --ink-2:#5E6D66; --line:#D7DFD9;
+  --court:#14654F; --court-soft:#DCEDE5;
+  --cork:#A8601C; --cork-soft:#F7E9D9;
+  --radius:14px;
+  --f-display:"Barlow Semi Condensed","Noto Sans TC","PingFang TC",sans-serif;
+  --f-body:"Noto Sans TC","PingFang TC",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --ground:#0F1412; --panel:#19201C; --field:#242C27;
+  --ink:#E7EDE8; --ink-2:#93A29A; --line:#2C3631;
+  --court:#55C6A6; --court-soft:#1B322B;
+  --cork:#E0A268; --cork-soft:#2E251A;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0F1412; --panel:#19201C; --field:#242C27;
+  --ink:#E7EDE8; --ink-2:#93A29A; --line:#2C3631;
+  --court:#55C6A6; --court-soft:#1B322B;
+  --cork:#E0A268; --cork-soft:#2E251A;
+  color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  -webkit-text-size-adjust:100%;}
+*{box-sizing:border-box}
+.wrap{max-width:560px;margin:0 auto;padding-block:20px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:14px;}
+
+/* header */
+.head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.head h1{font-family:var(--f-display);font-weight:700;font-size:30px;letter-spacing:.01em;
+  margin:0;text-wrap:balance}
+.head p{margin:0;color:var(--ink-2);font-size:13px}
+.rule{height:3px;border-top:1px solid var(--court);border-bottom:1px solid var(--court);opacity:.45}
+
+/* cards */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card > h2{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0;
+  display:flex;align-items:center;gap:8px;color:var(--ink)}
+.card > h2::before{content:"";width:3px;height:16px;background:var(--court);border-radius:2px}
+.hint{color:var(--ink-2);font-size:12.5px;margin:0}
+
+/* fields */
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field > label{font-family:var(--f-display);font-size:12px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-2)}
+input[type=text],input[type=date],input[type=time],input[type=number]{
+  font-family:var(--f-body);font-size:16px;color:var(--ink);background:var(--field);
+  border:1px solid transparent;border-radius:10px;padding:9px 10px;width:100%;min-width:0;
+  font-variant-numeric:tabular-nums;}
+input[type=number]{font-family:var(--f-display);font-weight:600;letter-spacing:.02em}
+input:focus-visible{outline:2px solid var(--court);outline-offset:1px;border-color:transparent}
+input::placeholder{color:var(--ink-2);opacity:.7}
+
+/* chips */
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:var(--f-display);font-size:13.5px;font-weight:600;letter-spacing:.02em;
+  background:var(--field);color:var(--ink-2);border:1px solid transparent;border-radius:999px;
+  padding:5px 11px;cursor:pointer;line-height:1.3}
+.chip[aria-pressed="true"]{background:var(--court-soft);color:var(--court);border-color:var(--court)}
+.chip:focus-visible{outline:2px solid var(--court);outline-offset:2px}
+
+/* people */
+.roster{display:flex;flex-direction:column;gap:8px}
+.person{background:var(--field);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.prow{display:flex;align-items:center;gap:8px;min-width:0}
+.pname{flex:1;min-width:0;background:transparent;border:none;font-family:var(--f-body);
+  font-size:16px;font-weight:500;color:var(--ink);padding:2px 0}
+.pname:focus-visible{outline:2px solid var(--court);outline-offset:2px;border-radius:6px}
+.pamt{font-family:var(--f-display);font-weight:700;font-size:19px;color:var(--cork);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.pdel{background:none;border:none;color:var(--ink-2);font-size:20px;line-height:1;cursor:pointer;
+  padding:2px 4px;border-radius:6px}
+.pdel:hover{color:var(--cork)}
+.ptime{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ptime input[type=time]{background:var(--panel);width:auto;flex:0 1 112px;padding:6px 8px;font-size:16px}
+.pmin{font-family:var(--f-display);font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.add{display:flex;gap:8px}
+.add input{flex:1;min-width:0}
+.btn{font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.02em;
+  background:var(--court);color:var(--panel);border:none;border-radius:10px;padding:9px 16px;cursor:pointer}
+.btn:focus-visible{outline:2px solid var(--court);outline-offset:2px}
+.btn.ghost{background:transparent;color:var(--court);border:1px solid var(--court)}
+.btn.wide{width:100%;padding:12px}
+
+/* result */
+.lines{display:flex;flex-direction:column}
+.line{display:flex;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.line:last-child{border-bottom:none}
+.line .who{flex:1;min-width:0;font-weight:500;overflow-wrap:anywhere}
+.line .when{font-family:var(--f-display);font-size:13px;color:var(--ink-2);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.line .amt{font-family:var(--f-display);font-weight:700;font-size:18px;color:var(--ink);
+  font-variant-numeric:tabular-nums;min-width:62px;text-align:right}
+.totals{display:flex;flex-direction:column;gap:4px;background:var(--court-soft);border-radius:12px;padding:11px 12px}
+.trow{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;color:var(--court)}
+.trow b{font-family:var(--f-display);font-size:17px;font-variant-numeric:tabular-nums}
+.trow.big{align-items:baseline}
+.diff{font-family:var(--f-display);font-size:13px;color:var(--cork);
+  background:var(--cork-soft);border-radius:8px;padding:6px 10px;font-variant-numeric:tabular-nums}
+
+.demo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--cork-soft);
+  color:var(--cork);border-radius:10px;padding:8px 11px;font-size:13px}
+.demo button{font-family:var(--f-display);font-weight:600;font-size:13px;background:transparent;
+  border:1px solid var(--cork);color:var(--cork);border-radius:999px;padding:3px 10px;cursor:pointer}
+
+details{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+summary{font-family:var(--f-display);font-weight:600;font-size:15px;cursor:pointer;color:var(--ink)}
+details ol{margin:10px 0 0;padding-left:20px;color:var(--ink-2);font-size:13.5px;display:flex;
+  flex-direction:column;gap:5px}
+details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
+.toast{font-size:13px;color:var(--court);min-height:18px;font-weight:500}
+/* save history */
+.actions{display:flex;gap:8px}
+.actions .btn{flex:1}
+.hist{display:flex;flex-direction:column;gap:8px}
+.hitem{background:var(--field);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.hhead{display:flex;align-items:baseline;gap:8px;min-width:0;width:100%;
+  background:none;border:none;padding:0;color:inherit;text-align:left;cursor:pointer;font:inherit}
+.hhead:focus-visible{outline:2px solid var(--court);outline-offset:3px;border-radius:6px}
+.hwhen{font-family:var(--f-display);font-weight:600;font-size:15px;white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.hvenue{flex:1;min-width:0;color:var(--ink-2);font-size:13px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.hsum{font-family:var(--f-display);font-weight:700;font-size:17px;color:var(--cork);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.hbody{font-size:13px;color:var(--ink-2);display:flex;flex-direction:column;gap:3px}
+.hrow{display:flex;justify-content:space-between;gap:10px;font-variant-numeric:tabular-nums;min-width:0}
+.hrow span:first-child{overflow-wrap:anywhere}
+.hmeta{border-top:1px solid var(--line);padding-top:5px;margin-top:3px;color:var(--court)}
+.hacts{display:flex;gap:6px;flex-wrap:wrap}
+.chip.danger[aria-pressed="true"]{background:var(--cork-soft);color:var(--cork);border-color:var(--cork)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.exportbox{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:12px}
+.btn.filebtn{display:inline-flex;align-items:center;justify-content:center;text-align:center}
+.btn:has(> input.sr:focus-visible){outline:2px solid var(--court);outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){.chip,.btn{transition:background .15s,color .15s,border-color .15s}}
+@media (max-width:380px){ .g3{grid-template-columns:1fr 1fr} }
+</style>
+
+<main class="wrap">
+  <header class="head">
+    <h1>羽球分帳</h1>
+    <p>場地費按每個人實際在場的時間分攤</p>
+  </header>
+  <div class="rule"></div>
+
+  <div class="demo" id="demoBar">
+    <span>目前是示範場次，直接改成你的資料就好。</span>
+    <button type="button" id="clearDemo">清空示範</button>
+  </div>
+
+  <section class="card">
+    <h2>場次</h2>
+    <div class="grid g2">
+      <div class="field">
+        <label for="date">日期</label>
+        <input type="date" id="date">
+      </div>
+      <div class="field">
+        <label for="venue">場地</label>
+        <input type="text" id="venue" placeholder="球館名稱" autocomplete="off">
+      </div>
+    </div>
+    <div class="chips" id="venueChips"></div>
+    <div class="grid g2">
+      <div class="field">
+        <label for="start">開始</label>
+        <input type="time" id="start" step="1800">
+      </div>
+      <div class="field">
+        <label for="end">結束</label>
+        <input type="time" id="end" step="1800">
+      </div>
+    </div>
+
+    <div>
+      <div class="chips" style="margin-bottom:8px">
+        <button type="button" class="chip" id="modeTotal" aria-pressed="false">場地費給總額</button>
+        <button type="button" class="chip" id="modeHour" aria-pressed="true">按時數算</button>
+      </div>
+      <div class="grid g2" id="boxTotal" hidden>
+        <div class="field">
+          <label for="feeTotal">場地費總額</label>
+          <input type="number" id="feeTotal" inputmode="numeric" min="0" step="10" placeholder="0">
+        </div>
+      </div>
+      <div class="grid g3" id="boxHour">
+        <div class="field">
+          <label for="feeHour">每小時</label>
+          <input type="number" id="feeHour" inputmode="numeric" min="0" step="10" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="courts">面數</label>
+          <input type="number" id="courts" inputmode="numeric" min="1" step="1" value="1">
+        </div>
+        <div class="field">
+          <label>場地費</label>
+          <input type="text" id="feeCalc" readonly tabindex="-1">
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>場地費怎麼分</label>
+      <div class="chips">
+        <button type="button" class="chip" id="splitSlot" aria-pressed="true">按時段平分</button>
+        <button type="button" class="chip" id="splitProp" aria-pressed="false">按時間比例</button>
+      </div>
+      <p class="hint" id="splitHint"></p>
+    </div>
+
+    <div class="grid g2">
+      <div class="field">
+        <label for="ball">球資（整筒／散球）</label>
+        <input type="number" id="ball" inputmode="numeric" min="0" step="10" placeholder="0">
+      </div>
+      <div class="field">
+        <label>球資怎麼分</label>
+        <div class="chips">
+          <button type="button" class="chip" id="ballEven" aria-pressed="true">平均分</button>
+          <button type="button" class="chip" id="ballTime" aria-pressed="false">按時段</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>球友</h2>
+    <p class="hint">預設全場。只打一段的人，按「自訂」填進場／離場時間。</p>
+    <div class="roster" id="roster"></div>
+    <div class="add">
+      <input type="text" id="newName" placeholder="加入球友姓名" autocomplete="off" enterkeyhint="done">
+      <button type="button" class="btn" id="addBtn">加入</button>
+    </div>
+    <div class="chips" id="recentChips"></div>
+  </section>
+
+  <section class="card">
+    <h2>每人應付</h2>
+    <div class="chips">
+      <span class="pmin" style="align-self:center;margin-right:2px">進位到</span>
+      <button type="button" class="chip unit" data-unit="1" aria-pressed="false">1 元</button>
+      <button type="button" class="chip unit" data-unit="5" aria-pressed="true">5 元</button>
+      <button type="button" class="chip unit" data-unit="10" aria-pressed="false">10 元</button>
+    </div>
+    <div class="lines" id="lines"></div>
+    <div class="totals">
+      <div class="trow big"><span>總花費（場地＋球資）</span><b id="tCost">$0</b></div>
+      <div class="trow big"><span>實際收到</span><b id="tCollect">$0</b></div>
+    </div>
+    <div class="diff" id="tDiff"></div>
+    <div class="actions">
+      <button type="button" class="btn ghost" id="copyBtn">複製明細</button>
+      <button type="button" class="btn" id="saveBtn">存檔</button>
+    </div>
+    <div class="toast" id="toast"></div>
+  </section>
+
+  <section class="card">
+    <h2>存檔紀錄</h2>
+    <p class="hint" id="histSummary"></p>
+    <div class="hist" id="hist"></div>
+
+    <div class="exportbox" id="exportBox">
+      <div class="field">
+        <label for="fname">匯出檔名</label>
+        <input type="text" id="fname" value="save" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="actions" id="dlRow">
+        <button type="button" class="btn" id="expCsv">匯出 CSV</button>
+        <button type="button" class="btn ghost" id="expJson">匯出 JSON</button>
+      </div>
+      <div class="actions">
+        <label class="btn ghost filebtn" id="impLabel">匯入 JSON
+          <input type="file" id="impFile" class="sr" accept=".json,application/json">
+        </label>
+        <button type="button" class="btn ghost" id="exportBtn">複製成文字</button>
+      </div>
+      <p class="hint" id="dlHint">CSV 給試算表排序統計，JSON 是完整備份、可以再匯入回來。按下去會跳出儲存視窗，在那裡選要放哪（iCloud 雲碟、Google Drive、傳給自己都行）。</p>
+    </div>
+  </section>
+
+  <details>
+    <summary>放到 iPhone 主畫面</summary>
+    <ol>
+      <li>用 <b>Safari</b> 開這一頁（其他瀏覽器沒有這個功能）。</li>
+      <li>點下方中間的分享鍵。</li>
+      <li>往下找「加入主畫面」，命名「羽球分帳」後儲存。</li>
+      <li>之後從主畫面點開，全螢幕、不用網路也能算。</li>
+    </ol>
+    <p>按「存檔」才會留下紀錄，存在這支手機的瀏覽器裡，名稱是 <b>save</b>。日期＋場地＋時段相同的場次會覆蓋同一筆，不會越存越亂，最多保留 200 場。</p>
+    <p>要搬到雲端就用「匯出 CSV / JSON」。按下去會跳出儲存視窗，位置由你選：存到「檔案」App、iCloud 雲碟、Google Drive，或直接傳給自己都可以。<b>CSV</b> 是一位球友一列，丟進 Google 試算表就能排序加總；<b>JSON</b> 是完整備份，換手機後用「匯入 JSON」就能整包還原，同場次會以檔案裡的為準。</p>
+    <p>場次設定與常用名單是另外自動記住的，要清掉<button type="button" class="chip" id="wipe">按這裡重設</button>（存檔紀錄不受影響）。</p>
+  </details>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(s){ return document.querySelector(s); };
+  var KEY = "bdsplit.v1";
+
+  var el = {
+    date:$("#date"), venue:$("#venue"), venueChips:$("#venueChips"),
+    start:$("#start"), end:$("#end"),
+    modeTotal:$("#modeTotal"), modeHour:$("#modeHour"),
+    boxTotal:$("#boxTotal"), boxHour:$("#boxHour"),
+    feeTotal:$("#feeTotal"), feeHour:$("#feeHour"), courts:$("#courts"), feeCalc:$("#feeCalc"),
+    ball:$("#ball"), ballEven:$("#ballEven"), ballTime:$("#ballTime"),
+    splitSlot:$("#splitSlot"), splitProp:$("#splitProp"), splitHint:$("#splitHint"),
+    roster:$("#roster"), newName:$("#newName"), addBtn:$("#addBtn"), recentChips:$("#recentChips"),
+    lines:$("#lines"), tCost:$("#tCost"), tCollect:$("#tCollect"), tDiff:$("#tDiff"),
+    copyBtn:$("#copyBtn"), saveBtn:$("#saveBtn"), toast:$("#toast"),
+    hist:$("#hist"), histSummary:$("#histSummary"), exportBtn:$("#exportBtn"),
+    exportBox:$("#exportBox"), fname:$("#fname"), expCsv:$("#expCsv"), expJson:$("#expJson"),
+    dlRow:$("#dlRow"), dlHint:$("#dlHint"), impFile:$("#impFile"),
+    demoBar:$("#demoBar"), clearDemo:$("#clearDemo"), wipe:$("#wipe")
+  };
+
+  var HKEY = "save";
+  var MAX = 200;
+  var state = { feeMode:"hour", ballMode:"even", splitMode:"slot", unit:5, isDemo:true };
+  var people = [];
+  var records = [];
+  var venues = [];
+  var recent = [];
+  var uid = 0;
+
+  /* ---------- time helpers ---------- */
+  function toMin(t){
+    if(!t) return null;
+    var p = t.split(":");
+    var h = parseInt(p[0],10), m = parseInt(p[1],10);
+    if(isNaN(h)||isNaN(m)) return null;
+    return h*60+m;
+  }
+  function fromMin(v){
+    var x = ((v % 1440) + 1440) % 1440;
+    var h = Math.floor(x/60), m = x%60;
+    return (h<10?"0":"")+h+":"+(m<10?"0":"")+m;
+  }
+  function num(v){ var n = parseFloat(v); return isFinite(n) && n>0 ? n : 0; }
+
+  /* times run in half-hour steps; snap anything that slips through */
+  function snap30(v){
+    var m = toMin(v);
+    if(m === null) return v;
+    return fromMin(Math.round(m / 30) * 30);
+  }
+
+  /* session window, in minutes, end pushed past midnight if needed */
+  function sessionWindow(){
+    var s = toMin(el.start.value), e = toMin(el.end.value);
+    if(s===null||e===null) return null;
+    if(e <= s) e += 1440;
+    return {s:s, e:e};
+  }
+
+  /* the slice of the session a person is actually there for */
+  function intervalOf(p, win){
+    if(!win) return null;
+    if(p.mode === "full") return { a:win.s, b:win.e };
+    var a = toMin(p.from), b = toMin(p.to);
+    if(a === null || b === null) return null;
+    if(b <= a) b += 1440;
+    var best = null, len = 0;
+    for(var k = -1440; k <= 1440; k += 1440){
+      var lo = Math.max(a + k, win.s), hi = Math.min(b + k, win.e);
+      if(hi - lo > len){ len = hi - lo; best = { a:lo, b:hi }; }
+    }
+    return best;
+  }
+
+  /* split an amount so each stretch of time is shared by whoever is on court then */
+  function slotShares(win, amount, rows){
+    var out = rows.map(function(){ return 0; });
+    var span = win ? win.e - win.s : 0;
+    if(!rows.length || span <= 0 || amount <= 0) return out;
+    var marks = {};
+    marks[win.s] = 1; marks[win.e] = 1;
+    rows.forEach(function(r){ if(r.iv){ marks[r.iv.a] = 1; marks[r.iv.b] = 1; } });
+    var edges = Object.keys(marks).map(Number).sort(function(a,b){ return a - b; });
+    for(var i = 0; i < edges.length - 1; i++){
+      var from = edges[i], to = edges[i+1], len = to - from;
+      if(len <= 0) continue;
+      var here = [];
+      rows.forEach(function(r, j){ if(r.iv && r.iv.a <= from && r.iv.b >= to) here.push(j); });
+      var slice = amount * len / span;
+      if(here.length){
+        here.forEach(function(j){ out[j] += slice / here.length; });
+      } else {
+        /* nobody on court for this stretch — the booking still costs, so everyone shares it */
+        rows.forEach(function(r, j){ out[j] += slice / rows.length; });
+      }
+    }
+    return out;
+  }
+
+  /* split an amount by how long each person was there */
+  function propShares(amount, rows){
+    var sum = rows.reduce(function(a,r){ return a + r.min; }, 0);
+    return rows.map(function(r){ return sum > 0 ? amount * r.min / sum : 0; });
+  }
+
+  /* split an amount evenly among whoever showed up */
+  function evenShares(amount, rows){
+    var present = rows.filter(function(r){ return r.min > 0; }).length;
+    return rows.map(function(r){
+      return (r.min > 0 && present > 0) ? amount / present : 0;
+    });
+  }
+
+  /* ---------- storage ---------- */
+  function save(){
+    try{
+      localStorage.setItem(KEY, JSON.stringify({
+        date:el.date.value, venue:el.venue.value, start:el.start.value, end:el.end.value,
+        feeMode:state.feeMode, feeTotal:el.feeTotal.value, feeHour:el.feeHour.value,
+        courts:el.courts.value, ball:el.ball.value, ballMode:state.ballMode,
+        splitMode:state.splitMode, unit:state.unit,
+        venues:venues, recent:recent,
+        people:people.map(function(p){ return {name:p.name, mode:p.mode, from:p.from, to:p.to}; })
+      }));
+    }catch(e){}
+  }
+  function load(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      if(!raw) return null;
+      return JSON.parse(raw);
+    }catch(e){ return null; }
+  }
+
+  /* ---------- people ---------- */
+  function addPerson(name, mode, from, to){
+    var win = sessionWindow();
+    var p = {
+      id: ++uid,
+      name: name || "",
+      mode: mode || "full",
+      from: from || (win ? fromMin(win.s) : "19:00"),
+      to: to || (win ? fromMin(win.e) : "22:00")
+    };
+    people.push(p);
+    el.roster.appendChild(buildRow(p));
+    return p;
+  }
+
+  function buildRow(p){
+    var box = document.createElement("div");
+    box.className = "person";
+
+    var row1 = document.createElement("div");
+    row1.className = "prow";
+    var name = document.createElement("input");
+    name.type = "text"; name.className = "pname"; name.value = p.name;
+    name.placeholder = "姓名"; name.id = "name-" + p.id; name.autocomplete = "off";
+    var amt = document.createElement("span");
+    amt.className = "pamt"; amt.textContent = "$0";
+    var del = document.createElement("button");
+    del.type = "button"; del.className = "pdel"; del.textContent = "×";
+    del.setAttribute("aria-label", "移除這位球友");
+    row1.appendChild(name); row1.appendChild(amt); row1.appendChild(del);
+
+    var row2 = document.createElement("div");
+    row2.className = "ptime";
+    var cFull = document.createElement("button");
+    cFull.type = "button"; cFull.className = "chip"; cFull.textContent = "全場";
+    var cCustom = document.createElement("button");
+    cCustom.type = "button"; cCustom.className = "chip"; cCustom.textContent = "自訂";
+    var tFrom = document.createElement("input");
+    tFrom.type = "time"; tFrom.step = "1800"; tFrom.value = p.from; tFrom.id = "from-" + p.id;
+    tFrom.setAttribute("aria-label", "進場時間");
+    var dash = document.createElement("span");
+    dash.className = "pmin"; dash.textContent = "–";
+    var tTo = document.createElement("input");
+    tTo.type = "time"; tTo.step = "1800"; tTo.value = p.to; tTo.id = "to-" + p.id;
+    tTo.setAttribute("aria-label", "離場時間");
+    var mins = document.createElement("span");
+    mins.className = "pmin";
+    row2.appendChild(cFull); row2.appendChild(cCustom);
+    row2.appendChild(tFrom); row2.appendChild(dash); row2.appendChild(tTo); row2.appendChild(mins);
+
+    box.appendChild(row1); box.appendChild(row2);
+    p.el = {box:box, amt:amt, mins:mins, from:tFrom, to:tTo, dash:dash, full:cFull, custom:cCustom};
+
+    function syncMode(){
+      var custom = p.mode === "custom";
+      cFull.setAttribute("aria-pressed", custom ? "false" : "true");
+      cCustom.setAttribute("aria-pressed", custom ? "true" : "false");
+      tFrom.hidden = !custom; tTo.hidden = !custom; dash.hidden = !custom;
+    }
+    syncMode();
+
+    name.addEventListener("input", function(){ p.name = name.value; recalc(); save(); });
+    cFull.addEventListener("click", function(){ p.mode = "full"; syncMode(); recalc(); save(); });
+    cCustom.addEventListener("click", function(){
+      p.mode = "custom";
+      var win = sessionWindow();
+      if(win){ if(!p.from) p.from = fromMin(win.s); if(!p.to) p.to = fromMin(win.e); }
+      tFrom.value = p.from; tTo.value = p.to;
+      syncMode(); recalc(); save();
+    });
+    tFrom.addEventListener("change", function(){
+      tFrom.value = snap30(tFrom.value); p.from = tFrom.value; recalc(); save();
+    });
+    tTo.addEventListener("change", function(){
+      tTo.value = snap30(tTo.value); p.to = tTo.value; recalc(); save();
+    });
+    del.addEventListener("click", function(){
+      people = people.filter(function(x){ return x.id !== p.id; });
+      box.remove(); recalc(); save();
+    });
+
+    return box;
+  }
+
+  /* ---------- the split ---------- */
+  function compute(){
+    var win = sessionWindow();
+    var totalMin = win ? win.e - win.s : 0;
+
+    var court = state.feeMode === "total"
+      ? num(el.feeTotal.value)
+      : num(el.feeHour.value) * Math.max(1, num(el.courts.value) || 1) * (totalMin/60);
+
+    var ball = num(el.ball.value);
+
+    var rows = people.map(function(p){
+      var iv = intervalOf(p, win);
+      return { p:p, iv:iv, min: iv ? iv.b - iv.a : 0 };
+    });
+
+    var bySlot = state.splitMode !== "prop";
+    var courtShare = bySlot ? slotShares(win, court, rows) : propShares(court, rows);
+    var ballShare = state.ballMode === "even"
+      ? evenShares(ball, rows)
+      : (bySlot ? slotShares(win, ball, rows) : propShares(ball, rows));
+
+    rows.forEach(function(r, i){
+      r.raw = courtShare[i] + ballShare[i];
+      r.pay = r.raw > 0 ? Math.ceil(r.raw / state.unit) * state.unit : 0;
+    });
+
+    var cost = Math.round(court + ball);
+    var collected = rows.reduce(function(a,r){ return a + r.pay; }, 0);
+    return { rows:rows, court:court, ball:ball, cost:cost, collected:collected,
+             win:win, totalMin:totalMin };
+  }
+
+  function recalc(){
+    var r = compute();
+
+    el.feeCalc.value = r.totalMin > 0
+      ? "$" + Math.round(num(el.feeHour.value) * Math.max(1, num(el.courts.value) || 1) * (r.totalMin/60))
+      : "$0";
+
+    r.rows.forEach(function(row){
+      row.p.el.amt.textContent = "$" + row.pay;
+      row.p.el.mins.textContent = row.min > 0 ? fmtDur(row.min) : "未入場";
+    });
+
+    el.lines.innerHTML = "";
+    if(r.rows.length === 0){
+      var empty = document.createElement("div");
+      empty.className = "hint";
+      empty.textContent = "還沒有球友。在上面加入名字就會自動算。";
+      el.lines.appendChild(empty);
+    }
+    r.rows.forEach(function(row){
+      var line = document.createElement("div");
+      line.className = "line";
+      var who = document.createElement("span");
+      who.className = "who"; who.textContent = row.p.name || "（未命名）";
+      var when = document.createElement("span");
+      when.className = "when";
+      when.textContent = row.p.mode === "full" ? "全場 " + fmtDur(row.min)
+                        : row.p.from + "–" + row.p.to + " " + fmtDur(row.min);
+      var amt = document.createElement("span");
+      amt.className = "amt"; amt.textContent = "$" + row.pay;
+      line.appendChild(who); line.appendChild(when); line.appendChild(amt);
+      el.lines.appendChild(line);
+    });
+
+    el.tCost.textContent = "$" + r.cost;
+    el.tCollect.textContent = "$" + r.collected;
+    var diff = r.collected - r.cost;
+    el.tDiff.textContent = diff > 0
+      ? "進位後多收 $" + diff + "，可以留著當下次的球資。"
+      : (diff < 0 ? "目前少收 $" + (-diff) + "，主揪會貼到錢。" : "剛好打平，沒有零頭。");
+    el.tDiff.hidden = r.rows.length === 0;
+  }
+
+  function fmtDur(min){
+    if(min <= 0) return "0 分";
+    var h = Math.floor(min/60), m = min%60;
+    if(h && m) return h + " 小時 " + m + " 分";
+    if(h) return h + " 小時";
+    return m + " 分";
+  }
+
+  /* ---------- a saved record ---------- */
+  function recordFromCurrent(){
+    var r = compute();
+    return {
+      id: Date.now(),
+      date: el.date.value, venue: el.venue.value.trim(),
+      start: el.start.value, end: el.end.value,
+      feeMode: state.feeMode, feeTotal: el.feeTotal.value, feeHour: el.feeHour.value,
+      courts: el.courts.value, ball: el.ball.value,
+      ballMode: state.ballMode, splitMode: state.splitMode, unit: state.unit,
+      court: Math.round(r.court), ballAmt: Math.round(r.ball),
+      cost: r.cost, collected: r.collected,
+      people: r.rows.map(function(x){
+        return { name:x.p.name, mode:x.p.mode, from:x.p.from, to:x.p.to, min:x.min, pay:x.pay };
+      })
+    };
+  }
+
+  function textOf(rec){
+    var out = [];
+    var d = rec.date ? rec.date.replace(/-/g, "/") : "";
+    var when = (rec.start || rec.end) ? rec.start + "–" + rec.end : "";
+    out.push("🏸 " + [d, rec.venue, when].filter(Boolean).join("  "));
+    out.push("場地費 $" + rec.court + "　球資 $" + rec.ballAmt);
+    out.push("——————");
+    (rec.people || []).forEach(function(p){
+      out.push((p.name || "（未命名）") + "　" +
+               (p.mode === "full" ? "全場" : p.from + "–" + p.to) + "　$" + p.pay);
+    });
+    out.push("——————");
+    out.push("共收 $" + rec.collected + "（花費 $" + rec.cost +
+             (rec.collected - rec.cost !== 0 ? "，差額 $" + (rec.collected - rec.cost) : "") + "）");
+    return out.join("\n");
+  }
+
+  function toast(msg){
+    el.toast.textContent = msg;
+    setTimeout(function(){ if(el.toast.textContent === msg) el.toast.textContent = ""; }, 3200);
+  }
+
+  /* ---------- clipboard ---------- */
+  function copyText(text, okMsg){
+    var done = function(){ toast(okMsg); };
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, function(){ fallback(text); });
+      } else { fallback(text); }
+    }catch(e){ fallback(text); }
+  }
+  function fallback(text){
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;left:0;top:0;width:100%;height:160px;font-size:16px;z-index:99";
+    document.body.appendChild(ta);
+    ta.select();
+    toast("複製鍵在這個環境被擋住了，已把文字選起來，長按選「拷貝」後點空白處關閉。");
+    ta.addEventListener("blur", function(){ ta.remove(); });
+  }
+  el.copyBtn.addEventListener("click", function(){
+    copyText(textOf(recordFromCurrent()), "明細已複製，貼到 LINE 就好。");
+  });
+
+  /* ---------- save file (localStorage key "save") ---------- */
+  function loadRecords(){
+    try{
+      var raw = localStorage.getItem(HKEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    }catch(e){ return []; }
+  }
+  function writeRecords(){
+    try{ localStorage.setItem(HKEY, JSON.stringify(records)); return true; }
+    catch(e){ toast("存檔空間滿了，請先刪掉幾筆舊紀錄。"); return false; }
+  }
+
+  el.saveBtn.addEventListener("click", function(){
+    var rec = recordFromCurrent();
+    if(!rec.people.length){ toast("還沒有球友，沒有東西可以存。"); return; }
+    var i = -1;
+    records.forEach(function(x, k){
+      if(x.date === rec.date && x.venue === rec.venue &&
+         x.start === rec.start && x.end === rec.end) i = k;
+    });
+    if(i >= 0){ rec.id = records[i].id; records[i] = rec; }
+    else { records.push(rec); }
+    records.sort(function(a,b){
+      return (b.date || "").localeCompare(a.date || "") || (b.id - a.id);
+    });
+    records = records.slice(0, MAX);
+    if(writeRecords()) toast(i >= 0 ? "同一場次已經存過，這筆已更新。" : "已存檔。");
+    renderHistory();
+  });
+
+  el.exportBtn.addEventListener("click", function(){
+    copyText(records.map(textOf).join("\n\n"), "全部存檔已複製，可貼到備忘錄備份。");
+  });
+
+  /* ---------- export as a real file ---------- */
+  function csvCell(v){
+    var s = (v === null || v === undefined) ? "" : String(v);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function csvOf(list){
+    var rows = [["日期","場地","開始","結束","球友","在場分鐘","應付","場地費","球資","總花費","實收"]];
+    list.forEach(function(r){
+      (r.people || []).forEach(function(p){
+        rows.push([r.date, r.venue, r.start, r.end, p.name, p.min, p.pay,
+                   r.court, r.ballAmt, r.cost, r.collected]);
+      });
+    });
+    return "﻿" + rows.map(function(row){ return row.map(csvCell).join(","); }).join("\r\n");
+  }
+
+  function baseName(){
+    var n = (el.fname.value || "").trim().replace(/\.(csv|json)$/i, "");
+    return n || "save";
+  }
+
+  /* plain browser download — used when the page runs on its own site */
+  function saveViaLink(name, data, mime){
+    try{
+      var blob = new Blob([data], { type: mime });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = name; a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500);
+      toast("已匯出 " + name + "，在「檔案」App 的下載項目裡。");
+    }catch(e){
+      toast("這個瀏覽器不能存檔案，請改用「複製成文字」。");
+    }
+  }
+
+  function doExport(kind){
+    if(!records.length){ toast("還沒有存檔可以匯出。"); return; }
+    var name = baseName() + "." + kind;
+    var data = kind === "csv" ? csvOf(records) : JSON.stringify(records, null, 2);
+    var mime = kind === "csv" ? "text/csv;charset=utf-8" : "application/json";
+
+    /* on its own site there is no claude runtime — use the ordinary download */
+    if(!(window.claude && window.claude.use)){ saveViaLink(name, data, mime); return; }
+
+    window.claude.use("downloads").then(function(dl){
+      if(!dl){ toast("這個畫面不能存檔案，請改用「複製成文字」。"); return; }
+      return dl.save({ filename:name, data:data }).then(function(res){
+        toast(res && res.status === "delivered"
+          ? "已送出 " + name + "。"
+          : "已匯出 " + name + "，在跳出來的視窗選存放位置。");
+      }, function(err){
+        var c = err && err.code;
+        if(c === "declined") toast("已取消匯出。");
+        else if(c === "too_large") toast("檔案太大，先刪掉幾筆舊紀錄再匯出。");
+        else if(c === "rate_limited") toast("上一個儲存視窗還開著，等一下再按。");
+        else if(c === "bad_request") toast("檔名不能用，換個簡單的英數字名稱。");
+        else toast("這個畫面不能存檔案，請改用「複製成文字」。");
+      });
+    });
+  }
+  el.expCsv.addEventListener("click", function(){ doExport("csv"); });
+  el.expJson.addEventListener("click", function(){ doExport("json"); });
+
+  /* ---------- import a JSON backup ---------- */
+  el.impFile.addEventListener("change", function(){
+    var f = el.impFile.files && el.impFile.files[0];
+    if(!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var incoming;
+      try{
+        incoming = JSON.parse(String(reader.result));
+        if(!Array.isArray(incoming)) throw new Error("not an array");
+      }catch(e){
+        toast("這個檔案不是本工具匯出的 JSON。");
+        el.impFile.value = ""; return;
+      }
+      var merged = {}, kept = 0;
+      records.concat(incoming).forEach(function(r){
+        if(!r || !Array.isArray(r.people)) return;
+        merged[[r.date, r.venue, r.start, r.end].join("|")] = r;
+      });
+      records = Object.keys(merged).map(function(k){
+        var r = merged[k];
+        if(!r.id) r.id = Date.now() + (kept++);
+        return r;
+      });
+      records.sort(function(a,b){
+        return (b.date || "").localeCompare(a.date || "") || (b.id - a.id);
+      });
+      records = records.slice(0, MAX);
+      writeRecords(); renderHistory();
+      toast("已匯入，重複的場次以檔案裡的為準，目前共 " + records.length + " 場。");
+      el.impFile.value = "";
+    };
+    reader.onerror = function(){ toast("讀不到這個檔案。"); el.impFile.value = ""; };
+    reader.readAsText(f);
+  });
+
+  function loadRecord(rec){
+    el.date.value = rec.date || "";
+    el.venue.value = rec.venue || "";
+    el.start.value = rec.start || "";
+    el.end.value = rec.end || "";
+    el.feeTotal.value = rec.feeTotal || "";
+    el.feeHour.value = rec.feeHour || "";
+    el.courts.value = rec.courts || "1";
+    el.ball.value = rec.ball || "";
+    state.unit = [1,5,10].indexOf(rec.unit) >= 0 ? rec.unit : 5;
+    Array.prototype.forEach.call(document.querySelectorAll(".chip.unit"), function(x){
+      x.setAttribute("aria-pressed", parseInt(x.dataset.unit,10) === state.unit ? "true" : "false");
+    });
+    people = [];
+    el.roster.innerHTML = "";
+    (rec.people || []).forEach(function(p){ addPerson(p.name, p.mode, p.from, p.to); });
+    state.isDemo = false;
+    el.demoBar.hidden = true;
+    setSplitMode(rec.splitMode === "prop" ? "prop" : "slot");
+    setBallMode(rec.ballMode === "time" ? "time" : "even");
+    setFeeMode(rec.feeMode === "total" ? "total" : "hour");
+    recalc(); save();
+    window.scrollTo({ top:0, behavior:"smooth" });
+    toast("已載入這場，改完再按存檔會覆蓋同一筆。");
+  }
+
+  function renderHistory(){
+    el.hist.innerHTML = "";
+    if(!records.length){
+      var empty = document.createElement("div");
+      empty.className = "hint";
+      empty.textContent = "還沒有存檔。算完一場按「存檔」，這裡就會留下紀錄。";
+      el.hist.appendChild(empty);
+      el.histSummary.textContent = "";
+      return;
+    }
+    var sum = records.reduce(function(a,r){ return a + (r.cost || 0); }, 0);
+    el.histSummary.textContent = "共 " + records.length + " 場，累計花費 $" + sum + "。點一下日期可以展開明細。";
+    records.forEach(function(rec){ el.hist.appendChild(buildHist(rec)); });
+  }
+
+  function buildHist(rec){
+    var box = document.createElement("div");
+    box.className = "hitem";
+
+    var head = document.createElement("button");
+    head.type = "button"; head.className = "hhead";
+    head.setAttribute("aria-expanded", "false");
+    var when = document.createElement("span");
+    when.className = "hwhen";
+    when.textContent = (rec.date || "").slice(5).replace("-", "/") + " " + (rec.start || "");
+    var venue = document.createElement("span");
+    venue.className = "hvenue";
+    venue.textContent = (rec.venue || "（未填場地）") + "・" + (rec.people || []).length + " 人";
+    var total = document.createElement("span");
+    total.className = "hsum"; total.textContent = "$" + rec.collected;
+    head.appendChild(when); head.appendChild(venue); head.appendChild(total);
+
+    var body = document.createElement("div");
+    body.className = "hbody"; body.hidden = true;
+    (rec.people || []).forEach(function(p){
+      var row = document.createElement("div");
+      row.className = "hrow";
+      var a = document.createElement("span");
+      a.textContent = (p.name || "（未命名）") + "　" +
+                      (p.mode === "full" ? "全場" : p.from + "–" + p.to);
+      var b = document.createElement("span");
+      b.textContent = "$" + p.pay;
+      row.appendChild(a); row.appendChild(b);
+      body.appendChild(row);
+    });
+    var meta = document.createElement("div");
+    meta.className = "hrow hmeta";
+    var ml = document.createElement("span");
+    ml.textContent = "場地費 $" + rec.court + "・球資 $" + rec.ballAmt;
+    var mr = document.createElement("span");
+    mr.textContent = "花費 $" + rec.cost;
+    meta.appendChild(ml); meta.appendChild(mr);
+    body.appendChild(meta);
+
+    var acts = document.createElement("div");
+    acts.className = "hacts"; acts.hidden = true;
+    var load = document.createElement("button");
+    load.type = "button"; load.className = "chip"; load.textContent = "載入回去改";
+    load.addEventListener("click", function(){ loadRecord(rec); });
+    var copy = document.createElement("button");
+    copy.type = "button"; copy.className = "chip"; copy.textContent = "複製明細";
+    copy.addEventListener("click", function(){ copyText(textOf(rec), "這場的明細已複製。"); });
+    var del = document.createElement("button");
+    del.type = "button"; del.className = "chip danger"; del.textContent = "刪除";
+    del.setAttribute("aria-pressed", "false");
+    var armed = false, timer = null;
+    del.addEventListener("click", function(){
+      if(!armed){
+        armed = true;
+        del.textContent = "再按一次確定刪除";
+        del.setAttribute("aria-pressed", "true");
+        timer = setTimeout(function(){
+          armed = false; del.textContent = "刪除"; del.setAttribute("aria-pressed", "false");
+        }, 3500);
+        return;
+      }
+      clearTimeout(timer);
+      records = records.filter(function(x){ return x.id !== rec.id; });
+      writeRecords(); renderHistory();
+      toast("已刪除這筆存檔。");
+    });
+    acts.appendChild(load); acts.appendChild(copy); acts.appendChild(del);
+
+    head.addEventListener("click", function(){
+      var open = body.hidden;
+      body.hidden = !open; acts.hidden = !open;
+      head.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    box.appendChild(head); box.appendChild(body); box.appendChild(acts);
+    return box;
+  }
+
+  /* ---------- chips & modes ---------- */
+  function setFeeMode(m){
+    state.feeMode = m;
+    el.modeTotal.setAttribute("aria-pressed", m === "total" ? "true" : "false");
+    el.modeHour.setAttribute("aria-pressed", m === "hour" ? "true" : "false");
+    el.boxTotal.hidden = m !== "total";
+    el.boxHour.hidden = m !== "hour";
+    recalc(); save();
+  }
+  el.modeTotal.addEventListener("click", function(){ setFeeMode("total"); });
+  el.modeHour.addEventListener("click", function(){ setFeeMode("hour"); });
+
+  function setSplitMode(m){
+    state.splitMode = m === "prop" ? "prop" : "slot";
+    el.splitSlot.setAttribute("aria-pressed", state.splitMode === "slot" ? "true" : "false");
+    el.splitProp.setAttribute("aria-pressed", state.splitMode === "prop" ? "true" : "false");
+    el.splitHint.textContent = state.splitMode === "slot"
+      ? "每個時段的錢，由那段時間在場的人平分。前面人少的時段就分得多。"
+      : "照每個人在場的時間長短，按比例分攤整筆費用。";
+    recalc(); save();
+  }
+  el.splitSlot.addEventListener("click", function(){ setSplitMode("slot"); });
+  el.splitProp.addEventListener("click", function(){ setSplitMode("prop"); });
+
+  function setBallMode(m){
+    state.ballMode = m;
+    el.ballEven.setAttribute("aria-pressed", m === "even" ? "true" : "false");
+    el.ballTime.setAttribute("aria-pressed", m === "time" ? "true" : "false");
+    recalc(); save();
+  }
+  el.ballEven.addEventListener("click", function(){ setBallMode("even"); });
+  el.ballTime.addEventListener("click", function(){ setBallMode("time"); });
+
+  Array.prototype.forEach.call(document.querySelectorAll(".chip.unit"), function(b){
+    b.addEventListener("click", function(){
+      state.unit = parseInt(b.dataset.unit, 10);
+      Array.prototype.forEach.call(document.querySelectorAll(".chip.unit"), function(x){
+        x.setAttribute("aria-pressed", x === b ? "true" : "false");
+      });
+      recalc(); save();
+    });
+  });
+
+  ["start","end"].forEach(function(k){
+    el[k].addEventListener("change", function(){ el[k].value = snap30(el[k].value); });
+  });
+
+  ["date","venue","start","end","feeTotal","feeHour","courts","ball"].forEach(function(k){
+    el[k].addEventListener("input", function(){ recalc(); save(); });
+    el[k].addEventListener("change", function(){
+      if(k === "venue") rememberVenue(el.venue.value);
+      recalc(); save();
+    });
+  });
+
+  /* ---------- add person ---------- */
+  function commitAdd(){
+    var n = el.newName.value.trim();
+    if(!n) return;
+    addPerson(n);
+    rememberName(n);
+    el.newName.value = "";
+    recalc(); save();
+  }
+  el.addBtn.addEventListener("click", commitAdd);
+  el.newName.addEventListener("keydown", function(e){
+    if(e.key === "Enter"){ e.preventDefault(); commitAdd(); }
+  });
+
+  function rememberName(n){
+    recent = [n].concat(recent.filter(function(x){ return x !== n; })).slice(0, 12);
+    renderRecent();
+  }
+  function rememberVenue(v){
+    v = (v || "").trim();
+    if(!v) return;
+    venues = [v].concat(venues.filter(function(x){ return x !== v; })).slice(0, 4);
+    renderVenues();
+  }
+  function renderRecent(){
+    el.recentChips.innerHTML = "";
+    if(!recent.length) return;
+    var lab = document.createElement("span");
+    lab.className = "pmin"; lab.style.alignSelf = "center"; lab.textContent = "常用";
+    el.recentChips.appendChild(lab);
+    recent.forEach(function(n){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.textContent = n;
+      b.addEventListener("click", function(){
+        addPerson(n); recalc(); save();
+      });
+      el.recentChips.appendChild(b);
+    });
+  }
+  function renderVenues(){
+    el.venueChips.innerHTML = "";
+    venues.forEach(function(v){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.textContent = v;
+      b.addEventListener("click", function(){ el.venue.value = v; recalc(); save(); });
+      el.venueChips.appendChild(b);
+    });
+  }
+
+  el.clearDemo.addEventListener("click", function(){
+    people = [];
+    el.roster.innerHTML = "";
+    el.venue.value = "";
+    el.feeHour.value = ""; el.feeTotal.value = ""; el.ball.value = "";
+    state.isDemo = false;
+    el.demoBar.hidden = true;
+    addPerson("");
+    recalc(); save();
+    el.venue.focus();
+  });
+
+  el.wipe.addEventListener("click", function(){
+    try{ localStorage.removeItem(KEY); }catch(e){}
+    recent = []; venues = [];
+    renderRecent(); renderVenues();
+    toast("常用名單與場地已清除。");
+  });
+
+  /* ---------- boot ---------- */
+  function today(){
+    var d = new Date();
+    return d.getFullYear() + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0"+d.getDate()).slice(-2);
+  }
+
+  function seedDemo(){
+    el.date.value = today();
+    el.venue.value = "大安運動中心";
+    el.start.value = "19:00";
+    el.end.value = "22:00";
+    el.feeHour.value = "400";
+    el.courts.value = "2";
+    el.ball.value = "300";
+    addPerson("阿達");
+    addPerson("小宇");
+    addPerson("老王");
+    addPerson("Kevin", "custom", "20:00", "22:00");
+    addPerson("思妤", "custom", "19:00", "21:00");
+  }
+
+  function restore(d){
+    el.demoBar.hidden = true;
+    state.isDemo = false;
+    el.date.value = d.date || today();
+    el.venue.value = d.venue || "";
+    el.start.value = d.start || "19:00";
+    el.end.value = d.end || "22:00";
+    el.feeTotal.value = d.feeTotal || "";
+    el.feeHour.value = d.feeHour || "";
+    el.courts.value = d.courts || "1";
+    el.ball.value = d.ball || "";
+    state.ballMode = d.ballMode === "time" ? "time" : "even";
+    state.unit = [1,5,10].indexOf(d.unit) >= 0 ? d.unit : 5;
+    venues = Array.isArray(d.venues) ? d.venues : [];
+    recent = Array.isArray(d.recent) ? d.recent : [];
+    (Array.isArray(d.people) ? d.people : []).forEach(function(p){
+      addPerson(p.name, p.mode, p.from, p.to);
+    });
+    setSplitMode(d.splitMode === "prop" ? "prop" : "slot");
+    setBallMode(state.ballMode);
+    Array.prototype.forEach.call(document.querySelectorAll(".chip.unit"), function(x){
+      x.setAttribute("aria-pressed", parseInt(x.dataset.unit,10) === state.unit ? "true" : "false");
+    });
+    setFeeMode(d.feeMode === "total" ? "total" : "hour");
+  }
+
+  var saved = load();
+  if(saved && (saved.people || saved.venue)){
+    restore(saved);
+  } else {
+    seedDemo();
+    setSplitMode("slot");
+    setFeeMode("hour");
+  }
+  records = loadRecords();
+  if(window.claude && window.claude.use){
+    window.claude.use("downloads").then(function(dl){
+      if(!dl){
+        el.dlRow.hidden = true;
+        el.dlHint.textContent = "這個畫面不能直接存檔案，請按「複製成文字」貼到備忘錄備份。";
+      }
+    }, function(){});
+  }
+  renderRecent();
+  renderVenues();
+  renderHistory();
+  recalc();
+})();
+</script>
