@@ -1,5 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="羽球場地費與球資分攤，按每個人實際在場的時段計算。">
+<meta name="theme-color" content="#F1F4F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1412" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="羽球分帳">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 180 180%27%3E%3Crect width=%27180%27 height=%27180%27 rx=%2740%27 fill=%27%2314654F%27/%3E%3Ctext x=%2790%27 y=%27122%27 font-size=%2796%27 text-anchor=%27middle%27 fill=%27%23fff%27 font-family=%27sans-serif%27%3E%24%3C/text%3E%3C/svg%3E">
+<style>
+:root{color-scheme:light;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
 <title>羽球分帳</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <style>
 /* Layout: single phone-width column; three stacked cards divided by court-line hairlines. */
@@ -159,7 +179,8 @@ details p{color:var(--ink-2);font-size:15px;margin:10px 0 0}
 @media (max-width:430px){ .g3{grid-template-columns:1fr 1fr} }
 @media (max-width:360px){ .g2,.g3{grid-template-columns:1fr} }
 </style>
-
+</head>
+<body>
 <main class="wrap">
   <header class="head">
     <h1>羽球分帳</h1>
@@ -1239,3 +1260,5 @@ details p{color:var(--ink-2);font-size:15px;margin:10px 0 0}
   recalc();
 })();
 </script>
+</body>
+</html>
