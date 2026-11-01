@@ -63,6 +63,13 @@ input[type=text],input[type=date],input[type=time],input[type=number],select{
   font-variant-numeric:tabular-nums;}
 input[type=number]{font-family:var(--f-display);font-weight:600;letter-spacing:.02em}
 select{font-variant-numeric:tabular-nums}
+textarea{font-family:var(--f-body);font-size:16px;color:var(--ink);background:var(--field);
+  border:1px solid transparent;border-radius:10px;padding:9px 10px;width:100%;min-width:0;
+  line-height:1.5;resize:vertical}
+textarea:focus-visible{outline:2px solid var(--court);outline-offset:1px}
+textarea::placeholder{color:var(--ink-2);opacity:.7}
+#msgBox{margin-top:2px}
+#msgBox .field{margin-top:10px}
 input:focus-visible,select:focus-visible{outline:2px solid var(--court);outline-offset:1px;border-color:transparent}
 input::placeholder{color:var(--ink-2);opacity:.7}
 
@@ -264,6 +271,21 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
       <div class="trow big"><span>實際收到</span><b id="tCollect">$0</b></div>
     </div>
     <div class="diff" id="tDiff"></div>
+    <details id="msgBox">
+      <summary>訊息格式</summary>
+      <div class="field">
+        <label for="greet">開頭問候</label>
+        <input type="text" id="greet" autocomplete="off">
+        <p class="hint">{場地} 會自動換成這場的球館名稱。留白就不加開頭。</p>
+      </div>
+      <div class="field">
+        <label for="payinfo">收款資訊</label>
+        <textarea id="payinfo" rows="4" spellcheck="false"
+          placeholder="📍Line pay&#10;📍○○銀行（代號000）&#10;　　帳號：000-00-000000-0"></textarea>
+        <p class="hint">貼一次就好，之後每次都會自動接在訊息最後，只存在這支手機裡。</p>
+      </div>
+    </details>
+
     <div class="actions">
       <button type="button" class="btn ghost" id="copyBtn">複製明細</button>
       <button type="button" class="btn" id="saveBtn">存檔</button>
@@ -325,6 +347,7 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
     splitSlot:$("#splitSlot"), splitProp:$("#splitProp"), splitHint:$("#splitHint"),
     roster:$("#roster"), newName:$("#newName"), addBtn:$("#addBtn"), recentChips:$("#recentChips"),
     lines:$("#lines"), tCost:$("#tCost"), tCollect:$("#tCollect"), tDiff:$("#tDiff"),
+    greet:$("#greet"), payinfo:$("#payinfo"),
     copyBtn:$("#copyBtn"), saveBtn:$("#saveBtn"), toast:$("#toast"),
     hist:$("#hist"), histSummary:$("#histSummary"), exportBtn:$("#exportBtn"),
     exportBox:$("#exportBox"), fname:$("#fname"), expCsv:$("#expCsv"), expJson:$("#expJson"),
@@ -334,6 +357,7 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
 
   var HKEY = "save";
   var MAX = 200;
+  var DEFAULT_GREET = "謝各位光臨{場地}，歡迎下次再來";
   var state = { feeMode:"hour", ballMode:"even", splitMode:"slot", unit:5, isDemo:true };
   var people = [];
   var records = [];
@@ -474,6 +498,7 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
         feeMode:state.feeMode, feeTotal:el.feeTotal.value, feeHour:el.feeHour.value,
         courts:el.courts.value, ball:el.ball.value, ballMode:state.ballMode,
         splitMode:state.splitMode, unit:state.unit,
+        greet:el.greet.value, payinfo:el.payinfo.value,
         venues:venues, recent:recent,
         people:people.map(function(p){ return {name:p.name, mode:p.mode, from:p.from, to:p.to}; })
       }));
@@ -672,6 +697,46 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
     };
   }
 
+  /* same amount, one line: single-character names run together, longer ones separated */
+  function joinNames(list){
+    var allShort = list.every(function(n){ return n.length === 1; });
+    return allShort ? list.join("") : list.join("、");
+  }
+
+  /* 中正運動中心 → 中正 */
+  function venueShort(v){
+    v = (v || "").trim();
+    var s = v.replace(/^(臺北市|台北市|新北市)/, "")
+             .replace(/(國民)?運動中心$|體育館$|羽(球)?館$|羽球場$|球場$/, "")
+             .trim();
+    return s || v;
+  }
+
+  /* the message that goes to LINE */
+  function lineTextOf(rec){
+    var out = [];
+    var greet = (el.greet.value || "").trim();
+    if(greet){
+      out.push(greet.replace(/\{場地\}/g, venueShort(rec.venue)));
+      out.push("");
+    }
+    var order = [], byPay = {};
+    (rec.people || []).forEach(function(p){
+      if(!p.pay) return;
+      var k = String(p.pay);
+      if(!byPay[k]){ byPay[k] = []; order.push(k); }
+      byPay[k].push(p.name || "？");
+    });
+    order.forEach(function(k){
+      var names = byPay[k];
+      out.push(joinNames(names) + " $" + k + (names.length > 1 ? "/人" : ""));
+    });
+    var pay = (el.payinfo.value || "").replace(/\s+$/, "");
+    if(pay){ out.push(""); out.push(pay); }
+    return out.join("\n");
+  }
+
+  /* the fuller form, kept for the backup export */
   function textOf(rec){
     var out = [];
     var d = rec.date ? rec.date.replace(/-/g, "/") : "";
@@ -713,7 +778,10 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
     ta.addEventListener("blur", function(){ ta.remove(); });
   }
   el.copyBtn.addEventListener("click", function(){
-    copyText(textOf(recordFromCurrent()), "明細已複製，貼到 LINE 就好。");
+    copyText(lineTextOf(recordFromCurrent()), "訊息已複製，貼到 LINE 就好。");
+  });
+  ["greet","payinfo"].forEach(function(k){
+    el[k].addEventListener("input", function(){ save(); });
   });
 
   /* ---------- save file (localStorage key "save") ---------- */
@@ -939,7 +1007,7 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
     load.addEventListener("click", function(){ loadRecord(rec); });
     var copy = document.createElement("button");
     copy.type = "button"; copy.className = "chip"; copy.textContent = "複製明細";
-    copy.addEventListener("click", function(){ copyText(textOf(rec), "這場的明細已複製。"); });
+    copy.addEventListener("click", function(){ copyText(lineTextOf(rec), "這場的訊息已複製。"); });
     var del = document.createElement("button");
     del.type = "button"; del.className = "chip danger"; del.textContent = "刪除";
     del.setAttribute("aria-pressed", "false");
@@ -1126,6 +1194,8 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
     el.feeHour.value = d.feeHour || "";
     el.courts.value = d.courts || "1";
     el.ball.value = d.ball || "";
+    el.greet.value = typeof d.greet === "string" ? d.greet : DEFAULT_GREET;
+    el.payinfo.value = typeof d.payinfo === "string" ? d.payinfo : "";
     state.ballMode = d.ballMode === "time" ? "time" : "even";
     state.unit = [1,5,10].indexOf(d.unit) >= 0 ? d.unit : 5;
     venues = Array.isArray(d.venues) ? d.venues : [];
@@ -1143,6 +1213,7 @@ details p{color:var(--ink-2);font-size:13.5px;margin:10px 0 0}
 
   fillTimes(el.start, allHalfHours(), "19:00", false);
   fillTimes(el.end, allHalfHours(), "22:00", false);
+  el.greet.value = DEFAULT_GREET;
 
   var saved = load();
   if(saved && (saved.people || saved.venue)){
