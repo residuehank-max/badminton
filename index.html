@@ -56,7 +56,10 @@ body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-si
   display:flex;flex-direction:column;gap:14px;}
 
 /* header */
-.head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.head{display:flex;flex-direction:column;gap:5px}
+.by{margin:0;font-family:var(--f-display);font-size:14px;font-weight:600;
+  letter-spacing:.1em;color:var(--court)}
+.titleline{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .head h1{font-family:var(--f-display);font-weight:700;font-size:36px;letter-spacing:.01em;
   margin:0;text-wrap:balance}
 .head p{margin:0;color:var(--ink-2);font-size:14.5px}
@@ -183,8 +186,11 @@ details p{color:var(--ink-2);font-size:15px;margin:10px 0 0}
 <body>
 <main class="wrap">
   <header class="head">
-    <h1>羽球分帳</h1>
-    <p>場地費按每個人實際在場的時間分攤</p>
+    <p class="by">發球魔術師製作</p>
+    <div class="titleline">
+      <h1>羽球分帳</h1>
+      <p>場地費按每個人實際在場的時間分攤</p>
+    </div>
   </header>
   <div class="rule"></div>
 
