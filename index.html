@@ -58,7 +58,9 @@ body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-si
 /* header */
 .head{display:flex;flex-direction:column;gap:5px}
 .by{margin:0;font-family:var(--f-display);font-size:14px;font-weight:600;
-  letter-spacing:.1em;color:var(--court)}
+  letter-spacing:.1em;color:var(--court);display:flex;align-items:center;gap:8px}
+.ver{font-size:12.5px;font-weight:600;letter-spacing:.04em;color:var(--ink-2);
+  border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums}
 .head h1{font-family:var(--f-display);font-weight:700;font-size:36px;letter-spacing:.01em;
   margin:0;text-wrap:balance}
 .rule{height:3px;border-top:1px solid var(--court);border-bottom:1px solid var(--court);opacity:.45}
@@ -209,7 +211,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 <body>
 <main class="wrap">
   <header class="head">
-    <p class="by">發球魔術師製作</p>
+    <p class="by">發球魔術師製作<span class="ver">v2.3</span></p>
     <h1>羽球分帳</h1>
   </header>
   <div class="rule"></div>
