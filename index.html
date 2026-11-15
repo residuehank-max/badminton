@@ -142,6 +142,13 @@ input::placeholder{color:var(--ink-2);opacity:.7}
   font-variant-numeric:tabular-nums;white-space:nowrap}
 .line .amt{font-family:var(--f-display);font-weight:700;font-size:20px;color:var(--ink);
   font-variant-numeric:tabular-nums;min-width:64px;text-align:right}
+.changes{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.changes:empty{display:none}
+.crow{display:flex;align-items:center;gap:8px;background:var(--field);border-radius:12px;padding:8px 10px;
+  font-size:15.5px;color:var(--ink-2)}
+.crow select{background:var(--panel);flex:1 1 0;min-width:0}
+.crow input{background:var(--panel);width:64px;flex:none;text-align:center}
+.crow span{white-space:nowrap}
 .preview{margin:0;background:var(--field);border-radius:12px;padding:13px 14px;
   font-family:var(--f-body);font-size:16.5px;line-height:1.6;color:var(--ink);
   white-space:pre-wrap;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
@@ -211,7 +218,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 <body>
 <main class="wrap">
   <header class="head">
-    <p class="by">發球魔術師製作<span class="ver">v2.3</span></p>
+    <p class="by">發球魔術師製作<span class="ver">v2.4</span></p>
     <h1>羽球分帳</h1>
   </header>
   <div class="rule"></div>
@@ -263,9 +270,13 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
             <input type="number" id="feeHour" inputmode="numeric" min="0" step="10" placeholder="0">
           </div>
           <div class="field">
-            <label for="courts">面數</label>
+            <label for="courts" id="courtsLabel">面數</label>
             <input type="number" id="courts" inputmode="numeric" min="1" step="1" value="1">
           </div>
+        </div>
+        <div class="changes" id="courtChanges"></div>
+        <div class="chips" style="margin-top:8px">
+          <button type="button" class="chip" id="addChange">＋ 中途改面數</button>
         </div>
         <p class="feenote" id="feeCalc"></p>
       </div>
@@ -396,6 +407,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     modeTotal:$("#modeTotal"), modeHour:$("#modeHour"),
     boxTotal:$("#boxTotal"), boxHour:$("#boxHour"),
     feeTotal:$("#feeTotal"), feeHour:$("#feeHour"), courts:$("#courts"), feeCalc:$("#feeCalc"),
+    courtChanges:$("#courtChanges"), addChange:$("#addChange"), courtsLabel:$("#courtsLabel"),
     ball:$("#ball"), ballEven:$("#ballEven"), ballTime:$("#ballTime"),
     splitSlot:$("#splitSlot"), splitProp:$("#splitProp"), splitHint:$("#splitHint"),
     roster:$("#roster"), newName:$("#newName"), addBtn:$("#addBtn"), recentChips:$("#recentChips"),
@@ -504,11 +516,43 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     return best;
   }
 
-  /* split an amount so each stretch of time is shared by whoever is on court then */
-  function slotShares(win, amount, rows){
+  /* ---------- courts that change mid-session ---------- */
+  var changes = [];   /* [{at:"07:00", n:2}] — from this time on, this many courts */
+
+  function intoWindow(m, win){ return m < win.s ? m + 1440 : m; }
+
+  /* the session split into stretches with a fixed number of courts */
+  function courtPlan(win){
+    if(!win) return [];
+    var base = Math.max(0, Math.round(num(el.courts.value))) || 1;
+    var pts = changes.map(function(c){
+      var m = toMin(c.at);
+      return { m: m === null ? null : intoWindow(m, win), n: Math.max(0, Math.round(Number(c.n) || 0)) };
+    }).filter(function(c){ return c.m !== null && c.m > win.s && c.m < win.e; })
+      .sort(function(a, b){ return a.m - b.m; });
+    var segs = [], from = win.s, n = base;
+    pts.forEach(function(c){
+      if(c.m > from) segs.push({ a:from, b:c.m, n:n });
+      from = c.m; n = c.n;
+    });
+    segs.push({ a:from, b:win.e, n:n });
+    return segs;
+  }
+
+  /* court-minutes booked between a and b */
+  function courtMinutes(plan, a, b){
+    return plan.reduce(function(sum, s){
+      return sum + Math.max(0, Math.min(b, s.b) - Math.max(a, s.a)) * s.n;
+    }, 0);
+  }
+
+  /* split an amount so each stretch of time is shared by whoever is on court then;
+     costOf(a, b) says what the stretch from a to b costs */
+  function slotShares(win, amount, rows, costOf){
     var out = rows.map(function(){ return 0; });
     var span = win ? win.e - win.s : 0;
     if(!rows.length || span <= 0 || amount <= 0) return out;
+    if(!costOf) costOf = function(a, b){ return amount * (b - a) / span; };
     var present = [];
     rows.forEach(function(r, j){ if(r.iv) present.push(j); });
     if(!present.length) return out;
@@ -521,7 +565,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
       if(len <= 0) continue;
       var here = [];
       rows.forEach(function(r, j){ if(r.iv && r.iv.a <= from && r.iv.b >= to) here.push(j); });
-      var slice = amount * len / span;
+      var slice = costOf(from, to);
       if(here.length){
         here.forEach(function(j){ out[j] += slice / here.length; });
       } else {
@@ -532,10 +576,11 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     return out;
   }
 
-  /* split an amount by how long each person was there */
-  function propShares(amount, rows){
-    var sum = rows.reduce(function(a,r){ return a + r.min; }, 0);
-    return rows.map(function(r){ return sum > 0 ? amount * r.min / sum : 0; });
+  /* split an amount by how long each person was there (weightOf can count court-minutes instead) */
+  function propShares(amount, rows, weightOf){
+    var w = rows.map(function(r){ return weightOf ? weightOf(r) : r.min; });
+    var sum = w.reduce(function(a, x){ return a + x; }, 0);
+    return w.map(function(x){ return sum > 0 ? amount * x / sum : 0; });
   }
 
   /* split an amount evenly among whoever showed up */
@@ -552,7 +597,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
       localStorage.setItem(KEY, JSON.stringify({
         date:el.date.value, venue:el.venue.value, start:el.start.value, end:el.end.value,
         feeMode:state.feeMode, feeTotal:el.feeTotal.value, feeHour:el.feeHour.value,
-        courts:el.courts.value, ball:el.ball.value, ballMode:state.ballMode,
+        courts:el.courts.value, changes:copyChanges(), ball:el.ball.value, ballMode:state.ballMode,
         splitMode:state.splitMode, unit:state.unit,
         greet:el.greet.value, payinfo:el.payinfo.value,
         venues:venues, recent:recent,
@@ -659,9 +704,12 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     var win = sessionWindow();
     var totalMin = win ? win.e - win.s : 0;
 
-    var court = state.feeMode === "total"
-      ? num(el.feeTotal.value)
-      : num(el.feeHour.value) * Math.max(1, num(el.courts.value) || 1) * (totalMin/60);
+    var byHour = state.feeMode !== "total";
+    var plan = byHour ? courtPlan(win) : [];
+    var perMin = num(el.feeHour.value) / 60;
+    var court = byHour
+      ? (win ? perMin * courtMinutes(plan, win.s, win.e) : 0)
+      : num(el.feeTotal.value);
 
     var ball = num(el.ball.value);
 
@@ -671,7 +719,9 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     });
 
     var bySlot = state.splitMode !== "prop";
-    var courtShare = bySlot ? slotShares(win, court, rows) : propShares(court, rows);
+    var courtCost = byHour ? function(a, b){ return perMin * courtMinutes(plan, a, b); } : null;
+    var courtWeight = byHour ? function(r){ return r.iv ? courtMinutes(plan, r.iv.a, r.iv.b) : 0; } : null;
+    var courtShare = bySlot ? slotShares(win, court, rows, courtCost) : propShares(court, rows, courtWeight);
     var ballShare = state.ballMode === "even"
       ? evenShares(ball, rows)
       : (bySlot ? slotShares(win, ball, rows) : propShares(ball, rows));
@@ -684,21 +734,33 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     var cost = Math.round(court + ball);
     var collected = rows.reduce(function(a,r){ return a + r.pay; }, 0);
     return { rows:rows, court:court, ball:ball, cost:cost, collected:collected,
-             win:win, totalMin:totalMin };
+             win:win, totalMin:totalMin, plan:plan };
   }
 
   function recalc(){
     var r = compute();
 
-    var perHour = num(el.feeHour.value), nCourts = Math.max(1, num(el.courts.value) || 1);
+    var perHour = num(el.feeHour.value);
+    el.courtsLabel.textContent = changes.length ? "一開始幾面" : "面數";
     el.feeCalc.textContent = "";
     if(perHour > 0 && r.totalMin > 0){
       var b = document.createElement("b");
-      b.textContent = "$" + Math.round(perHour * nCourts * (r.totalMin/60));
+      b.textContent = "$" + Math.round(r.court);
       el.feeCalc.appendChild(document.createTextNode("場地費 "));
       el.feeCalc.appendChild(b);
-      el.feeCalc.appendChild(document.createTextNode(
-        "　" + perHour + " × " + nCourts + " 面 × " + fmtDur(r.totalMin)));
+      if(r.plan.length <= 1){
+        el.feeCalc.appendChild(document.createTextNode(
+          "　" + perHour + " × " + (r.plan.length ? r.plan[0].n : 1) + " 面 × " + fmtDur(r.totalMin)));
+      } else {
+        el.feeCalc.appendChild(document.createTextNode("　每面每小時 " + perHour));
+        r.plan.forEach(function(s){
+          var line = document.createElement("span");
+          line.style.display = "block";
+          line.textContent = fromMin(s.a) + "–" + fromMin(s.b) + "　" + s.n + " 面 × " + fmtDur(s.b - s.a)
+            + " = $" + Math.round(perHour / 60 * s.n * (s.b - s.a));
+          el.feeCalc.appendChild(line);
+        });
+      }
     } else {
       el.feeCalc.textContent = "填每小時的價錢，場地費會自動算出來。";
     }
@@ -761,7 +823,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
       date: el.date.value, venue: el.venue.value.trim(),
       start: el.start.value, end: el.end.value,
       feeMode: state.feeMode, feeTotal: el.feeTotal.value, feeHour: el.feeHour.value,
-      courts: el.courts.value, ball: el.ball.value,
+      courts: el.courts.value, changes: copyChanges(), ball: el.ball.value,
       ballMode: state.ballMode, splitMode: state.splitMode, unit: state.unit,
       court: Math.round(r.court), ballAmt: Math.round(r.ball),
       cost: r.cost, collected: r.collected,
@@ -1006,6 +1068,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     el.feeTotal.value = rec.feeTotal || "";
     el.feeHour.value = rec.feeHour || "";
     el.courts.value = rec.courts || "1";
+    setChanges(rec.changes);
     el.ball.value = rec.ball || "";
     state.unit = [1,5,10].indexOf(rec.unit) >= 0 ? rec.unit : 5;
     Array.prototype.forEach.call(document.querySelectorAll(".chip.unit"), function(x){
@@ -1171,7 +1234,72 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
   });
 
   ["start","end"].forEach(function(k){
-    el[k].addEventListener("change", function(){ refreshPersonTimes(); });
+    el[k].addEventListener("change", function(){ refreshPersonTimes(); renderChanges(); });
+  });
+
+  /* ---------- mid-session court changes ---------- */
+  function copyChanges(){
+    return changes.map(function(c){ return { at:c.at, n:c.n }; });
+  }
+
+  function setChanges(list){
+    changes = Array.isArray(list) ? list.filter(function(c){ return c && c.at; })
+      .map(function(c){ return { at:String(c.at), n:Math.max(0, Math.round(Number(c.n) || 0)) }; }) : [];
+    renderChanges();
+  }
+
+  /* a change can start at any half hour strictly inside the session */
+  function changeSlots(){
+    var list = sessionSlots();
+    return list.length > 2 ? list.slice(1, -1) : list;
+  }
+
+  function renderChanges(){
+    el.courtChanges.innerHTML = "";
+    var slots = changeSlots();
+    changes.forEach(function(c, i){
+      var row = document.createElement("div");
+      row.className = "crow";
+      var t1 = document.createElement("span"); t1.textContent = "從";
+      var sel = document.createElement("select");
+      sel.id = "chg-at-" + i; sel.setAttribute("aria-label", "從幾點開始");
+      c.at = fillTimes(sel, slots, c.at, false);
+      var t2 = document.createElement("span"); t2.textContent = "起";
+      var inp = document.createElement("input");
+      inp.type = "number"; inp.inputMode = "numeric"; inp.min = "0"; inp.step = "1";
+      inp.id = "chg-n-" + i; inp.value = c.n; inp.setAttribute("aria-label", "改成幾面");
+      var t3 = document.createElement("span"); t3.textContent = "面";
+      var del = document.createElement("button");
+      del.type = "button"; del.className = "pdel"; del.textContent = "×";
+      del.setAttribute("aria-label", "移除這次改面數");
+
+      sel.addEventListener("change", function(){ c.at = sel.value; recalc(); save(); });
+      inp.addEventListener("input", function(){
+        c.n = Math.max(0, Math.round(Number(inp.value) || 0)); recalc(); save();
+      });
+      del.addEventListener("click", function(){
+        changes.splice(changes.indexOf(c), 1);
+        renderChanges(); recalc(); save();
+      });
+
+      [t1, sel, t2, inp, t3, del].forEach(function(x){ row.appendChild(x); });
+      el.courtChanges.appendChild(row);
+    });
+  }
+
+  el.addChange.addEventListener("click", function(){
+    var slots = changeSlots();
+    var win = sessionWindow();
+    var last = changes.length ? changes[changes.length - 1] : null;
+    var at = slots[Math.floor((slots.length - 1) / 2)];
+    if(last && win){
+      var lastM = intoWindow(toMin(last.at), win);
+      var later = slots.filter(function(t){ return intoWindow(toMin(t), win) > lastM; });
+      if(later.length) at = later[0];
+    }
+    var base = Math.max(0, Math.round(num(el.courts.value))) || 1;
+    changes.push({ at:at, n:(last ? last.n : base) + 1 });
+    renderChanges(); recalc(); save();
   });
 
   ["date","venue","start","end","feeTotal","feeHour","courts","ball"].forEach(function(k){
@@ -1235,6 +1363,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     el.roster.innerHTML = "";
     el.venue.value = "";
     el.feeHour.value = ""; el.feeTotal.value = ""; el.ball.value = "";
+    setChanges([]);
     state.isDemo = false;
     el.demoBar.hidden = true;
     addPerson("");
@@ -1280,6 +1409,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     el.feeTotal.value = d.feeTotal || "";
     el.feeHour.value = d.feeHour || "";
     el.courts.value = d.courts || "1";
+    setChanges(d.changes);
     el.ball.value = d.ball || "";
     el.greet.value = typeof d.greet === "string" ? d.greet : DEFAULT_GREET;
     el.payinfo.value = typeof d.payinfo === "string" ? d.payinfo : "";
