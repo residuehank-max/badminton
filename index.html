@@ -220,7 +220,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 <body>
 <main class="wrap">
   <header class="head">
-    <p class="by">發球魔術師製作<span class="ver">v2.6</span></p>
+    <p class="by">發球魔術師製作<span class="ver">v2.7</span></p>
     <h1>羽球分帳</h1>
   </header>
   <div class="rule"></div>
@@ -897,11 +897,11 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
   }
 
   var toastTimer = null;
-  function toast(msg){
+  function toast(msg, ms){
     el.toast.textContent = msg;
     el.toast.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function(){ el.toast.classList.remove("show"); }, 3200);
+    toastTimer = setTimeout(function(){ el.toast.classList.remove("show"); }, ms || 3200);
   }
 
   /* ---------- clipboard ---------- */
@@ -987,7 +987,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
   }
 
   /* plain browser download — used when the page runs on its own site */
-  function saveViaLink(name, data, mime){
+  function saveViaLink(name, data, mime, quiet){
     try{
       var blob = new Blob([data], { type: mime });
       var url = URL.createObjectURL(blob);
@@ -996,7 +996,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
       document.body.appendChild(a);
       a.click();
       setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500);
-      toast("已存到手機：「檔案」App 的「下載」裡的 " + name);
+      if(!quiet) toast("已存到手機：" + savedWhere(name), 6000);
     }catch(e){
       toast("這個瀏覽器不能存檔案，請改用「複製成文字」。");
     }
@@ -1042,6 +1042,14 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
   function noteNewSave(){ var b = readBk(); b.n += 1; writeBk(b); }
   function markBackedUp(){ writeBk({ n: 0, at: today() }); renderHistory(); }
 
+  function savedWhere(name){
+    var ua = navigator.userAgent || "";
+    if(/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1))
+      return "「檔案」App › 下載項目 › " + name;
+    if(/Android/.test(ua)) return "內部儲存空間 › Download › " + name;
+    return "下載資料夾 › " + name;
+  }
+
   function backupName(ext){
     return baseName() + "_" + today().replace(/-/g, "") + "." + ext;
   }
@@ -1072,12 +1080,17 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     if(!records.length){ toast("還沒有存檔可以備份。"); return; }
     var file = shareableBackup();
     if(!file){ toast("這支手機不支援直接分享檔案，請按「存到手機」。"); return; }
-    navigator.share({ files:[file], title:"羽球分帳備份" }).then(function(){
+    navigator.share({ files:[file] }).then(function(){
       markBackedUp();
       toast("已備份 " + records.length + " 場。");
     }, function(err){
-      if(err && err.name === "AbortError") toast("已取消備份。");
-      else toast("備份沒有完成，請改按「存到手機」。");
+      if(err && err.name === "AbortError"){ toast("已取消備份。"); return; }
+      /* the share sheet would not open in this browser — save to the phone instead */
+      var local = backupName("json");
+      saveViaLink(local, backupData(), "application/json", true);
+      markBackedUp();
+      toast("這個瀏覽器打不開分享選單（" + ((err && err.name) || "未知") + "），已改存到手機的「下載」資料夾："
+        + savedWhere(local), 9000);
     });
   });
 
