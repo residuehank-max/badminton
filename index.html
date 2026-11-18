@@ -207,7 +207,9 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .hacts{display:flex;gap:6px;flex-wrap:wrap}
 .chip.danger[aria-pressed="true"]{background:var(--cork-soft);color:var(--cork);border-color:var(--cork)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.exportbox{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:12px}
+.exportbox{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:14px}
+.subhead{margin:0;font-family:var(--f-display);font-weight:600;font-size:18px;color:var(--ink)}
+.nudge{margin:0;background:var(--cork-soft);color:var(--cork);border-radius:10px;padding:10px 12px;font-size:15px;line-height:1.5}
 .btn.filebtn{display:inline-flex;align-items:center;justify-content:center;text-align:center}
 .btn:has(> input.sr:focus-visible){outline:2px solid var(--court);outline-offset:2px}
 @media (prefers-reduced-motion:no-preference){.chip,.btn{transition:background .15s,color .15s,border-color .15s}}
@@ -218,7 +220,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 <body>
 <main class="wrap">
   <header class="head">
-    <p class="by">發球魔術師製作<span class="ver">v2.5</span></p>
+    <p class="by">發球魔術師製作<span class="ver">v2.6</span></p>
     <h1>羽球分帳</h1>
   </header>
   <div class="rule"></div>
@@ -362,20 +364,23 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     <div class="hist" id="hist"></div>
 
     <div class="exportbox" id="exportBox">
+      <h3 class="subhead">備份</h3>
+      <p class="nudge" id="nudge" hidden></p>
       <div class="field" id="fnameField">
-        <label for="fname">匯出檔名</label>
+        <label for="fname">備份檔名</label>
         <input type="text" id="fname" value="save" autocomplete="off" spellcheck="false">
       </div>
       <div class="actions" id="dlRow">
-        <button type="button" class="btn" id="expCsv">匯出 CSV</button>
-        <button type="button" class="btn ghost" id="expJson">匯出 JSON</button>
+        <button type="button" class="btn" id="bkCloud">備份到雲端</button>
+        <button type="button" class="btn ghost" id="bkPhone">存到手機</button>
       </div>
-      <div class="actions">
-        <label class="btn ghost filebtn" id="impLabel">匯入 JSON
-          <input type="file" id="impFile" class="sr" accept=".json,application/json">
-        </label>
+      <div class="actions" id="moreRow">
+        <button type="button" class="btn ghost" id="expCsv">匯出 CSV</button>
         <button type="button" class="btn ghost" id="exportBtn">複製成文字</button>
       </div>
+      <label class="btn ghost filebtn" id="impLabel">從備份還原
+        <input type="file" id="impFile" class="sr" accept=".json,.txt,application/json,text/plain">
+      </label>
       <p class="hint" id="dlHint"></p>
     </div>
   </section>
@@ -415,7 +420,8 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     greet:$("#greet"), payinfo:$("#payinfo"),
     copyBtn:$("#copyBtn"), saveBtn:$("#saveBtn"), toast:$("#toast"),
     hist:$("#hist"), histSummary:$("#histSummary"), exportBtn:$("#exportBtn"),
-    exportBox:$("#exportBox"), fname:$("#fname"), expCsv:$("#expCsv"), expJson:$("#expJson"),
+    exportBox:$("#exportBox"), fname:$("#fname"), expCsv:$("#expCsv"), bkCloud:$("#bkCloud"), bkPhone:$("#bkPhone"),
+    nudge:$("#nudge"), moreRow:$("#moreRow"),
     dlRow:$("#dlRow"), dlHint:$("#dlHint"), impFile:$("#impFile"),
     demoBar:$("#demoBar"), clearDemo:$("#clearDemo"), wipe:$("#wipe")
   };
@@ -946,7 +952,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
          x.start === rec.start && x.end === rec.end) i = k;
     });
     if(i >= 0){ rec.id = records[i].id; records[i] = rec; }
-    else { records.push(rec); }
+    else { records.push(rec); noteNewSave(); }
     records.sort(function(a,b){
       return (b.date || "").localeCompare(a.date || "") || (b.id - a.id);
     });
@@ -990,7 +996,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
       document.body.appendChild(a);
       a.click();
       setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500);
-      toast("已匯出 " + name + "，在「檔案」App 的下載項目裡。");
+      toast("已存到手機：「檔案」App 的「下載」裡的 " + name);
     }catch(e){
       toast("這個瀏覽器不能存檔案，請改用「複製成文字」。");
     }
@@ -1022,7 +1028,65 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     });
   }
   el.expCsv.addEventListener("click", function(){ doExport("csv"); });
-  el.expJson.addEventListener("click", function(){ doExport("json"); });
+
+  /* ---------- backup: to the cloud (share sheet) or to the phone ---------- */
+  var BKEY = "backupState";
+  function readBk(){
+    try{
+      var b = JSON.parse(localStorage.getItem(BKEY) || "null");
+      if(b && typeof b.n === "number") return b;
+    }catch(e){}
+    return { n: loadRecords().length, at: "" };   /* never backed up: every saved session counts */
+  }
+  function writeBk(b){ try{ localStorage.setItem(BKEY, JSON.stringify(b)); }catch(e){} }
+  function noteNewSave(){ var b = readBk(); b.n += 1; writeBk(b); }
+  function markBackedUp(){ writeBk({ n: 0, at: today() }); renderHistory(); }
+
+  function backupName(ext){
+    return baseName() + "_" + today().replace(/-/g, "") + "." + ext;
+  }
+  function backupData(){ return JSON.stringify(records, null, 2); }
+
+  /* the file we can hand to the share sheet; Android only takes some types, so fall back to .txt */
+  function shareableBackup(){
+    if(!(navigator.canShare && window.File)) return null;
+    var data = backupData();
+    var tries = [
+      new File([data], backupName("json"), { type:"application/json" }),
+      new File([data], backupName("txt"), { type:"text/plain" })
+    ];
+    for(var i = 0; i < tries.length; i++){
+      try{ if(navigator.canShare({ files:[tries[i]] })) return tries[i]; }catch(e){}
+    }
+    return null;
+  }
+  var canShareFiles = (function(){
+    try{
+      return !!(navigator.canShare && window.File &&
+        (navigator.canShare({ files:[new File(["{}"], "t.json", { type:"application/json" })] }) ||
+         navigator.canShare({ files:[new File(["{}"], "t.txt", { type:"text/plain" })] })));
+    }catch(e){ return false; }
+  })();
+
+  el.bkCloud.addEventListener("click", function(){
+    if(!records.length){ toast("還沒有存檔可以備份。"); return; }
+    var file = shareableBackup();
+    if(!file){ toast("這支手機不支援直接分享檔案，請按「存到手機」。"); return; }
+    navigator.share({ files:[file], title:"羽球分帳備份" }).then(function(){
+      markBackedUp();
+      toast("已備份 " + records.length + " 場。");
+    }, function(err){
+      if(err && err.name === "AbortError") toast("已取消備份。");
+      else toast("備份沒有完成，請改按「存到手機」。");
+    });
+  });
+
+  el.bkPhone.addEventListener("click", function(){
+    if(!records.length){ toast("還沒有存檔可以備份。"); return; }
+    var name = backupName("json");
+    saveViaLink(name, backupData(), "application/json");
+    markBackedUp();
+  });
 
   /* ---------- import a JSON backup ---------- */
   el.impFile.addEventListener("change", function(){
@@ -1035,7 +1099,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
         incoming = JSON.parse(String(reader.result));
         if(!Array.isArray(incoming)) throw new Error("not an array");
       }catch(e){
-        toast("這個檔案不是本工具匯出的 JSON。");
+        toast("這個檔案不是羽球分帳的備份檔。");
         el.impFile.value = ""; return;
       }
       var merged = {}, kept = 0;
@@ -1053,7 +1117,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
       });
       records = records.slice(0, MAX);
       writeRecords(); renderHistory();
-      toast("已匯入，重複的場次以檔案裡的為準，目前共 " + records.length + " 場。");
+      toast("已還原，重複的場次以備份檔為準，目前共 " + records.length + " 場。");
       el.impFile.value = "";
     };
     reader.onerror = function(){ toast("讀不到這個檔案。"); el.impFile.value = ""; };
@@ -1092,11 +1156,21 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
     var has = records.length > 0;
     el.fnameField.hidden = !has || !canFile;
     el.dlRow.hidden = !has || !canFile;
-    el.exportBtn.hidden = !has;
+    el.bkCloud.hidden = !canShareFiles;
+    el.moreRow.hidden = !has;
+    el.expCsv.hidden = !canFile;
+    var bk = readBk();
+    el.nudge.hidden = !(has && canFile && bk.n >= 3);
+    el.nudge.textContent = bk.at
+      ? "已經有 " + bk.n + " 場沒有備份了。備份一下，換手機或清掉瀏覽器資料也找得回來。"
+      : "這 " + bk.n + " 場都還沒備份過。備份一下，換手機或清掉瀏覽器資料也找得回來。";
     el.dlHint.textContent = !has
-      ? "換手機或以前備份過？按「匯入 JSON」把紀錄整包帶回來。"
+      ? "換手機或以前備份過？按「從備份還原」，選備份檔，紀錄就會整包回來。"
       : (canFile
-        ? "CSV 給試算表排序統計，JSON 是完整備份、可以再匯入回來。按下去會跳出儲存視窗，在那裡選要放哪（iCloud 雲碟、Google Drive、傳給自己都行）。"
+        ? (canShareFiles
+            ? "「備份到雲端」會跳出分享選單：iPhone 選「儲存到檔案」存進 iCloud 雲碟，Android 選「雲端硬碟」。「存到手機」會放進手機的「下載」資料夾。"
+            : "「存到手機」會放進手機的「下載」資料夾，可以再自己搬到雲端。")
+          + (bk.at ? "上次備份：" + bk.at.replace(/-/g, "/") + "。" : "")
         : "這個畫面不能直接存檔案，請按「複製成文字」貼到備忘錄備份。");
     el.hist.innerHTML = "";
     if(!records.length){
